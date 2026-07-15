@@ -31,7 +31,6 @@
         body {
             background: var(--bg-gradient);
             color: var(--text-light);
-            /* Uso de dvh para evitar que la interfaz móvil cubra el input */
             height: 100dvh; 
             display: flex;
             flex-direction: column;
@@ -95,10 +94,9 @@
             display: flex;
             flex-direction: column;
             width: 100%;
-            max-width: 1000px; /* Ancho máximo para legibilidad en escritorio */
+            max-width: 1000px;
             margin: 0 auto;
             position: relative;
-            /* Se adapta al dinámico de celulares */
             height: calc(100dvh - 70px); 
         }
 
@@ -111,6 +109,7 @@
             gap: 20px;
             scrollbar-width: thin;
             scrollbar-color: var(--primary-blue) transparent;
+            scroll-behavior: smooth;
         }
 
         .chat-body::-webkit-scrollbar {
@@ -137,7 +136,8 @@
             border-radius: 16px;
             font-size: 1rem;
             line-height: 1.5;
-            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* Se quitó el cubic-bezier rebotón por un ease-out mucho más sutil y natural */
+            animation: slideUp 0.3s ease-out;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
 
@@ -162,7 +162,8 @@
             gap: 12px;
             margin-top: 10px;
             max-width: 90%;
-            animation: fadeIn 0.6s ease;
+            /* Desvanecimiento suave sin brincos */
+            animation: fadeIn 0.4s ease-out;
         }
 
         .option-card {
@@ -255,7 +256,7 @@
 
         /* Animations */
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
         @keyframes fadeIn {
@@ -270,7 +271,6 @@
             .action-links a { padding: 8px; border-radius: 50%; }
             .chat-body { padding: 20px 15px; }
             .msg { max-width: 95%; }
-            /* Corrección clave para celulares usando dvh */
             main { height: calc(100dvh - 60px); } 
             .chat-footer { padding-bottom: 20px; }
         }
@@ -324,9 +324,7 @@
         // 1. Cargar el archivo JSON real al iniciar
         async function cargarDatos() {
             try {
-                // Hacemos fetch al archivo datos.json que debe estar en la misma carpeta
                 const response = await fetch('datos.json');
-                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -337,7 +335,6 @@
                 const categoriasSet = new Set(appData.expo.faq.map(item => item.categoria));
                 categorias = Array.from(categoriasSet);
 
-                // Iniciar flujo del bot
                 iniciarChat();
             } catch (error) {
                 console.error("Error al cargar datos.json:", error);
@@ -356,7 +353,9 @@
 
             wrapper.appendChild(msgDiv);
             chatBody.appendChild(wrapper);
-            scrollToBottom();
+            
+            // Usar un pequeño timeout asegura que el render se actualice antes del scroll
+            setTimeout(scrollToBottom, 50);
         }
 
         // 3. Renderizado Orgánico de Opciones (Cards)
@@ -371,10 +370,8 @@
                 const card = document.createElement('div');
                 card.classList.add('option-card');
                 
-                // Definir texto según el tipo de objeto recibido
                 let label = type === 'category' ? opt : (type === 'question' ? opt.pregunta : opt.label);
                 
-                // Icono decorativo sutil
                 const iconHTML = type === 'category' 
                     ? `<svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>`
                     : `<svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>`;
@@ -383,7 +380,6 @@
                 
                 card.addEventListener('click', () => {
                     appendMessage(label, 'user');
-                    // Retraso estético antes de responder
                     setTimeout(() => procesarSeleccion(opt, type), 400);
                 });
                 
@@ -392,7 +388,7 @@
             
             wrapper.appendChild(container);
             chatBody.appendChild(wrapper);
-            scrollToBottom();
+            setTimeout(scrollToBottom, 50);
         }
 
         function scrollToBottom() {
@@ -410,20 +406,27 @@
             if (tipo === 'category') {
                 const preguntas = appData.expo.faq.filter(f => f.categoria === seleccion);
                 appendMessage(`Excelente. Aquí están las consultas más frecuentes sobre "${seleccion}":`, 'bot');
-                appendOptions(preguntas, 'question');
+                // Retraso sutil antes de desplegar las opciones para que no sea abrupto
+                setTimeout(() => appendOptions(preguntas, 'question'), 300);
             } 
             else if (tipo === 'question') {
                 appendMessage(seleccion.respuesta, 'bot');
                 
+                // Calculamos tiempo de lectura según longitud de texto (min 1.5s, máx 3.5s aprox)
+                const lecturaMinima = 1500;
+                const tiempoCalculado = seleccion.respuesta.length * 30;
+                const tiempoEspera = Math.max(lecturaMinima, Math.min(tiempoCalculado, 4000));
+                
                 setTimeout(() => {
-                    appendMessage('¿Deseas consultar algo más?', 'bot');
+                    // Quitamos la burbuja "Deseas consultar algo más"
+                    // Mostramos solo el botón directo después del tiempo de lectura.
                     appendOptions([{label: 'Volver al Menú Principal', action: 'home'}], 'action');
-                }, 1000);
+                }, tiempoEspera);
             }
             else if (tipo === 'action') {
                 if (seleccion.action === 'home') {
                     appendMessage('Selecciona una nueva categoría:', 'bot');
-                    appendOptions(categorias, 'category');
+                    setTimeout(() => appendOptions(categorias, 'category'), 300);
                 }
             }
         }
@@ -439,7 +442,6 @@
             const busqueda = texto.toLowerCase();
 
             setTimeout(() => {
-                // Búsqueda simple en toda la base de datos de preguntas
                 const coincidencia = appData.expo.faq.find(item => 
                     item.pregunta.toLowerCase().includes(busqueda) || 
                     item.categoria.toLowerCase().includes(busqueda)
@@ -447,28 +449,27 @@
 
                 if (coincidencia) {
                     appendMessage(coincidencia.respuesta, 'bot');
+                    
+                    const tiempoEspera = Math.max(1500, Math.min(coincidencia.respuesta.length * 30, 4000));
                     setTimeout(() => {
                         appendOptions([{label: 'Volver al Menú Principal', action: 'home'}], 'action');
-                    }, 1000);
+                    }, tiempoEspera);
                 } else {
                     appendMessage("No encontré una respuesta exacta a tu consulta. Por favor, selecciona un tema de nuestro menú para guiarte mejor:", 'bot');
-                    appendOptions(categorias, 'category');
+                    setTimeout(() => appendOptions(categorias, 'category'), 600);
                 }
             }, 600);
         }
 
-        // Listeners de eventos para el input
+        // Listeners
         sendBtn.addEventListener('click', manejarInputUsuario);
         userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') manejarInputUsuario();
         });
-
-        // Agregamos un listener extra para asegurar el scroll al abrir el teclado en móviles
         userInput.addEventListener('focus', () => {
             setTimeout(scrollToBottom, 300);
         });
 
-        // Ejecutar carga al terminar de cargar la ventana
         window.addEventListener('DOMContentLoaded', cargarDatos);
 
     </script>
