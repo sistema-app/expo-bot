@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Asistente Virtual Ejecutivo - Expo 2026</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -31,7 +31,8 @@
         body {
             background: var(--bg-gradient);
             color: var(--text-light);
-            height: 100vh;
+            /* Uso de dvh para evitar que la interfaz móvil cubra el input */
+            height: 100dvh; 
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -97,7 +98,8 @@
             max-width: 1000px; /* Ancho máximo para legibilidad en escritorio */
             margin: 0 auto;
             position: relative;
-            height: calc(100vh - 70px);
+            /* Se adapta al dinámico de celulares */
+            height: calc(100dvh - 70px); 
         }
 
         .chat-body {
@@ -268,7 +270,8 @@
             .action-links a { padding: 8px; border-radius: 50%; }
             .chat-body { padding: 20px 15px; }
             .msg { max-width: 95%; }
-            main { height: calc(100vh - 60px); }
+            /* Corrección clave para celulares usando dvh */
+            main { height: calc(100dvh - 60px); } 
             .chat-footer { padding-bottom: 20px; }
         }
     </style>
@@ -458,6 +461,11 @@
         sendBtn.addEventListener('click', manejarInputUsuario);
         userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') manejarInputUsuario();
+        });
+
+        // Agregamos un listener extra para asegurar el scroll al abrir el teclado en móviles
+        userInput.addEventListener('focus', () => {
+            setTimeout(scrollToBottom, 300);
         });
 
         // Ejecutar carga al terminar de cargar la ventana
